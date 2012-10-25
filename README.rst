@@ -1,8 +1,9 @@
 proxy
 =====
 
-This module implements ``GET``, ``HEAD``, ``POST``, ``PUT``, ``DELETE`` and
-``CONNECT`` methods on ``BaseHTTPServer``.
+This module implements a tiny HTTP proxy by extending ``BaseHTTPServer``.
+Supports the ``GET``, ``HEAD``, ``POST``, ``PUT``, ``DELETE`` and ``CONNECT``
+methods.
 
 The latest version can be installed via `PyPI
 <http://pypi.python.org/pypi/proxy/>`_::
