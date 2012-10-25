@@ -29,11 +29,13 @@ Usage::
 
 Options::
 
-  -h --help     Show this screen.
-  --version     Show version and exit.
-  -p PORT       Port to bind to [default: 8000].
-  -l PATH       Path to the logfile [default: STDOUT].
-  -d            Daemonize (run in the background).
+  -h --help             Show this screen.
+  --version             Show version and exit.
+  -H, --host HOST       Host to bind to [default: 127.0.0.1].
+  -p, --port PORT       Port to bind to [default: 8000].
+  -l, --logfile PATH    Path to the logfile [default: STDOUT].
+  -d, --daemon          Daemonize (run in the background).
+  -v, --verbose         Log headers.
 
 
 To start the proxy server and bind it to port 22222 (the port on which it will
@@ -62,6 +64,10 @@ Change Log
 
 0.9.0
 ~~~~~
+
+* ability to specify the address the proxy will bind to (``--host``)
+
+* ability to log headers sent and received (``--verbose``)
 
 * major code refactoring
 

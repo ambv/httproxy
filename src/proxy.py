@@ -31,24 +31,27 @@ Usage:
   proxy [options] <allowed-client> ...
 
 Options:
-  -h --help     Show this screen.
-  --version     Show version and exit.
-  -p PORT       Port to bind to [default: 8000].
-  -l PATH       Path to the logfile [default: STDOUT].
-  -d            Daemonize (run in the background).
+  -h --help             Show this screen.
+  --version             Show version and exit.
+  -H, --host HOST       Host to bind to [default: 127.0.0.1].
+  -p, --port PORT       Port to bind to [default: 8000].
+  -l, --logfile PATH    Path to the logfile [default: STDOUT].
+  -d, --daemon          Daemonize (run in the background).
+  -v, --verbose         Log headers.
 """
 
 __version__ = "0.9.0"
 
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
-import SocketServer
 import ftplib
 import logging
 import logging.handlers
 import os
+import re
 import select
 import signal
 import socket
+import SocketServer
 import sys
 import threading
 from time import sleep
@@ -58,12 +61,16 @@ import urlparse
 from docopt import docopt
 
 DEFAULT_LOG_FILENAME = "proxy.log"
+HEADER_TERMINATOR =  re.compile(r'\r\n\r\n')
 
 
 class ProxyHandler(BaseHTTPRequestHandler):
     server_version = "TinyHTTPProxy/" + __version__
     protocol = "HTTP/1.0"
     rbufsize = 0                        # self.rfile Be unbuffered
+    allowed_clients = ()
+    verbose = False
+    cache = False
 
     def handle(self):
         ip, port = self.client_address
@@ -109,10 +116,10 @@ class ProxyHandler(BaseHTTPRequestHandler):
             self.connection.close()
 
     def do_GET(self):
-        (scm, netloc, path, params, query, fragment) = urlparse.urlparse(
+        scm, netloc, path, params, query, fragment = urlparse.urlparse(
             self.path, 'http')
-        if scm not in('http', 'ftp') or fragment or not netloc:
-            self.send_error(400, "bad url %s" % self.path)
+        if scm not in ('http', 'ftp') or fragment or not netloc:
+            self.send_error(400, "bad URL %s" % self.path)
             return
         soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
@@ -127,6 +134,7 @@ class ProxyHandler(BaseHTTPRequestHandler):
                     self.headers['Connection'] = 'close'
                     del self.headers['Proxy-Connection']
                     for key_val in self.headers.items():
+                        self.log_verbose("%s: %s", *key_val)
                         soc.send("%s: %s\r\n" % key_val)
                     soc.send("\r\n")
                     self._read_write(soc)
@@ -156,12 +164,12 @@ class ProxyHandler(BaseHTTPRequestHandler):
             soc.close()
             self.connection.close()
 
-    def _read_write(self, soc, max_idling=20, local=False):
+    def _read_write(self, soc, max_idling=20):
         iw = [self.connection, soc]
-        local_data = ""
+        local_data = []
         ow = []
         count = 0
-        while 1:
+        while True:
             count += 1
             (ins, _, exs) = select.select(iw, ow, iw, 1)
             if exs:
@@ -174,21 +182,33 @@ class ProxyHandler(BaseHTTPRequestHandler):
                         out = soc
                     data = i.recv(8192)
                     if data:
-                        if local:
-                            local_data += data
-                        else:
-                            out.send(data)
+                        if self.cache or self.verbose:
+                            local_data.append(data)
+                        out.send(data)
                         count = 0
             if count == max_idling:
                 break
-        if local:
-            return local_data
-        return None
+        result = "".join(local_data)
+        if self.verbose:
+            ht = HEADER_TERMINATOR.search(result)
+            if ht:
+                headers = result[:ht.span()[0]].split('\n')
+                for header in headers:
+                    header = header.strip()
+                    self.log_verbose("[response] %s", header)
+        return result
 
     do_HEAD = do_GET
     do_POST = do_GET
     do_PUT = do_GET
     do_DELETE = do_GET
+
+    def log_verbose(self, fmt, *args):
+        if not self.verbose:
+            return
+        self.server.logger.log(
+            logging.DEBUG, "%s %s", self.address_string(), fmt % args
+        )
 
     def log_message(self, fmt, *args):
         self.server.logger.log(
@@ -207,9 +227,9 @@ class ThreadingHTTPServer(SocketServer.ThreadingMixIn, HTTPServer):
         self.logger = logger
 
 
-def logSetup(filename, log_size, daemon):
+def setup_logging(filename, log_size, daemon, verbose):
     logger = logging.getLogger("TinyHTTPProxy")
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG if verbose else logging.INFO)
     if not filename or filename in ('-', 'STDOUT'):
         if not daemon:
             # display to the screen
@@ -244,7 +264,7 @@ def handler(signo, frame):
 def daemonize(logger):
     class DevNull(object):
         def __init__(self):
-            self.fd = os.open("/dev/null", os.O_WRONLY)
+            self.fd = os.open(os.devnull, os.O_WRONLY)
 
         def write(self, *args, **kwargs):
             return 0
@@ -277,7 +297,7 @@ def daemonize(logger):
         sleep(1)
         sys.exit(0)
     os.setsid()
-    fd = os.open('/dev/null', os.O_RDONLY)
+    fd = os.open(os.devnull, os.O_RDONLY)
     if fd != 0:
         os.dup2(fd, 0)
         os.close(fd)
@@ -286,8 +306,7 @@ def daemonize(logger):
     sys.stdout = null
     sys.stderr = log
     sys.stdin = null
-    fd = os.open('/dev/null', os.O_WRONLY)
-    #if fd != 1: os.dup2(fd, 1)
+    fd = os.open(os.devnull, os.O_WRONLY)
     os.dup2(sys.stdout.fileno(), 1)
     if fd != 2:
         os.dup2(fd, 2)
@@ -298,35 +317,36 @@ def daemonize(logger):
 def main():
     max_log_size = 20
     run_event = threading.Event()
-    local_hostname = socket.gethostname()
-
     args = docopt(__doc__, version=__version__)
     try:
-        args['-p'] = int(args['-p'])
-        if not (0 < args['-p'] < 65536):
+        args['--port'] = int(args['--port'])
+        if not (0 < args['--port'] < 65536):
             raise ValueError("Out of range.")
     except (ValueError, TypeError):
         print >>sys.stderr, "error: `%s` is not a valid port number." % (
-            args['-p']
+            args['--port']
         )
         return 1
-    logger = logSetup(args['-l'], max_log_size, args['-d'])
-    if args['-d']:
+    logger = setup_logging(
+        args['--logfile'], max_log_size, args['--daemon'], args['--verbose'],
+    )
+    if args['--daemon']:
         daemonize(logger)
     signal.signal(signal.SIGINT, handler)
-    allowed = []
     if args['<allowed-client>']:
+        allowed = []
         for name in args['<allowed-client>']:
             client = socket.gethostbyname(name)
             allowed.append(client)
             logger.log(logging.INFO, "Accept: %s(%s)" % (client, name))
+        ProxyHandler.allowed_clients = allowed
     else:
         logger.log(logging.INFO, "Any clients will be served...")
-    ProxyHandler.allowed_clients = allowed
-    server_address = socket.gethostbyname(local_hostname), int(args['-p'])
+    ProxyHandler.verbose = args['--verbose']
+    server_address = socket.gethostbyname(args['--host']), args['--port']
     httpd = ThreadingHTTPServer(server_address, ProxyHandler, logger)
     sa = httpd.socket.getsockname()
-    print "Serving HTTP on", sa[0], "port", sa[1]
+    logger.info("Serving HTTP on %s:%s" % (sa[0], sa[1]))
     req_count = 0
     while not run_event.isSet():
         try:
