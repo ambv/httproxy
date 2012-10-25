@@ -31,7 +31,7 @@ Usage:
   proxy [options] <allowed-client> ...
 
 Options:
-  -h --help              Show this screen.
+  -h, --help             Show this screen.
   --version              Show version and exit.
   -H, --host HOST        Host to bind to [default: 127.0.0.1].
   -p, --port PORT        Port to bind to [default: 8000].
