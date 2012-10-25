@@ -19,16 +19,22 @@ tracker <http://github.com/ambv/proxy/issues>`_ are maintained on
 `GitHub <http://github.com/ambv/proxy>`_.
 
 
-Usage examples
---------------
+Quickstart 
+----------
 
-Available command-line arguments::
+Usage::
 
-    proxy [-p port] [-l logfile] [-dh] [allowed_client_name ...]]
+  proxy [options]
+  proxy [options] <allowed-client> ...
 
-    -p       - Port to bind to
-    -l       - Path to logfile. If not specified, STDOUT is used
-    -d       - Run in the background
+Options::
+
+  -h --help     Show this screen.
+  --version     Show version and exit.
+  -p PORT       Port to bind to [default: 8000].
+  -l PATH       Path to the logfile [default: STDOUT].
+  -d            Daemonize (run in the background).
+
 
 To start the proxy server and bind it to port 22222 (the port on which it will
 listen and accept connections)::
@@ -53,6 +59,13 @@ the server in the background (as a daemon)::
 
 Change Log
 ----------
+
+0.9.0
+~~~~~
+
+* major code refactoring
+
+* compatible with Python 2.6 and 2.7 only: requires ``docopt`` and ``configparser``
 
 0.3.1
 ~~~~~

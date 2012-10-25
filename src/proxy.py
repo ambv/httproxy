@@ -24,14 +24,25 @@
 """Tiny HTTP Proxy.
 
 This module implements GET, HEAD, POST, PUT, DELETE and CONNECT
-methods on BaseHTTPServer."""
+methods on BaseHTTPServer.
 
-__version__ = "0.3.1"
+Usage:
+  proxy [options]
+  proxy [options] <allowed-client> ...
 
-import BaseHTTPServer
+Options:
+  -h --help     Show this screen.
+  --version     Show version and exit.
+  -p PORT       Port to bind to [default: 8000].
+  -l PATH       Path to the logfile [default: STDOUT].
+  -d            Daemonize (run in the background).
+"""
+
+__version__ = "0.9.0"
+
+from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 import SocketServer
 import ftplib
-import getopt
 import logging
 import logging.handlers
 import os
@@ -44,25 +55,25 @@ from time import sleep
 from types import FrameType, CodeType
 import urlparse
 
+from docopt import docopt
+
 DEFAULT_LOG_FILENAME = "proxy.log"
 
 
-class ProxyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
-    __base = BaseHTTPServer.BaseHTTPRequestHandler
-    __base_handle = __base.handle
-
+class ProxyHandler(BaseHTTPRequestHandler):
     server_version = "TinyHTTPProxy/" + __version__
+    protocol = "HTTP/1.0"
     rbufsize = 0                        # self.rfile Be unbuffered
 
     def handle(self):
         ip, port = self.client_address
         self.server.logger.log(logging.INFO, "Request from '%s'", ip)
-        if hasattr(self, 'allowed_clients') and ip not in self.allowed_clients:
+        if self.allowed_clients and ip not in self.allowed_clients:
             self.raw_requestline = self.rfile.readline()
             if self.parse_request():
                 self.send_error(403)
         else:
-            self.__base_handle()
+            BaseHTTPRequestHandler.handle(self)
 
     def _connect_to(self, netloc, soc):
         i = netloc.find(':')
@@ -190,18 +201,16 @@ class ProxyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         )
 
 
-class ThreadingHTTPServer(SocketServer.ThreadingMixIn,
-                          BaseHTTPServer.HTTPServer):
+class ThreadingHTTPServer(SocketServer.ThreadingMixIn, HTTPServer):
     def __init__(self, server_address, RequestHandlerClass, logger=None):
-        BaseHTTPServer.HTTPServer.__init__(self, server_address,
-                                           RequestHandlerClass)
+        HTTPServer.__init__(self, server_address, RequestHandlerClass)
         self.logger = logger
 
 
 def logSetup(filename, log_size, daemon):
     logger = logging.getLogger("TinyHTTPProxy")
     logger.setLevel(logging.INFO)
-    if not filename:
+    if not filename or filename in ('-', 'STDOUT'):
         if not daemon:
             # display to the screen
             handler = logging.StreamHandler()
@@ -221,18 +230,6 @@ def logSetup(filename, log_size, daemon):
 
     logger.addHandler(handler)
     return logger
-
-
-def usage(msg=None):
-    if msg:
-        print msg
-    print sys.argv[0],
-    print "[-p port] [-l logfile] [-dh] [allowed_client_name ...]]"
-    print
-    print "   -p       - Port to bind to"
-    print "   -l       - Path to logfile. If not specified, STDOUT is used"
-    print "   -d       - Run in the background"
-    print
 
 
 def handler(signo, frame):
@@ -299,50 +296,34 @@ def daemonize(logger):
 
 
 def main():
-    logfile = None
-    daemon = False
     max_log_size = 20
-    port = 8000
-    allowed = []
     run_event = threading.Event()
     local_hostname = socket.gethostname()
 
+    args = docopt(__doc__, version=__version__)
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "l:dhp:", [])
-    except getopt.GetoptError, e:
-        usage(str(e))
+        args['-p'] = int(args['-p'])
+        if not (0 < args['-p'] < 65536):
+            raise ValueError("Out of range.")
+    except (ValueError, TypeError):
+        print >>sys.stderr, "error: `%s` is not a valid port number." % (
+            args['-p']
+        )
         return 1
-
-    for opt, value in opts:
-        if opt == "-p":
-            port = int(value)
-        if opt == "-l":
-            logfile = value
-        if opt == "-d":
-            daemon = not daemon
-        if opt == "-h":
-            usage()
-            return 0
-
-    # setup the log file
-    logger = logSetup(logfile, max_log_size, daemon)
-
-    if daemon:
+    logger = logSetup(args['-l'], max_log_size, args['-d'])
+    if args['-d']:
         daemonize(logger)
     signal.signal(signal.SIGINT, handler)
-
-    if args:
-        allowed = []
-        for name in args:
+    allowed = []
+    if args['<allowed-client>']:
+        for name in args['<allowed-client>']:
             client = socket.gethostbyname(name)
             allowed.append(client)
             logger.log(logging.INFO, "Accept: %s(%s)" % (client, name))
-        ProxyHandler.allowed_clients = allowed
     else:
         logger.log(logging.INFO, "Any clients will be served...")
-
-    server_address = (socket.gethostbyname(local_hostname), port)
-    ProxyHandler.protocol = "HTTP/1.0"
+    ProxyHandler.allowed_clients = allowed
+    server_address = socket.gethostbyname(local_hostname), int(args['-p'])
     httpd = ThreadingHTTPServer(server_address, ProxyHandler, logger)
     sa = httpd.socket.getsockname()
     print "Serving HTTP on", sa[0], "port", sa[1]

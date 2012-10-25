@@ -38,7 +38,7 @@ finally:
 
 setup (
     name = 'proxy',
-    version = '0.3.1',
+    version = '0.9.0',
     author = 'Suzuki Hisao, Mitko Haralanov, Łukasz Langa',
     author_email = 'lukasz@langa.pl',
     description = "A tiny HTTP proxy implementation",
@@ -54,6 +54,7 @@ setup (
     zip_safe = False, # if only because of the readme file
     install_requires = [
         'configparser',
+        'docopt',
     ],
 
     classifiers = [
