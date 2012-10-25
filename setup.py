@@ -59,13 +59,28 @@ setup (
 
     classifiers = [
         'Development Status :: 5 - Production/Stable',
+        'Environment :: Console',
+        'Environment :: No Input/Output (Daemon)',
+        'Intended Audience :: Developers',
+        'Intended Audience :: Education',
+        'Intended Audience :: Information Technology',
+        'Intended Audience :: Other Audience',
+        'Intended Audience :: Science/Research',
+        'Intended Audience :: System Administrators',
+        'Intended Audience :: Telecommunications Industry  ',
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
+        'Operating System :: MacOS :: MacOS X',
         'Operating System :: POSIX',
         'Programming Language :: Python',
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 2 :: Only',
+        'Topic :: Internet :: WWW/HTTP',
+        'Topic :: Security',
         'Topic :: Software Development :: Libraries :: Python Modules',
+        'Topic :: System :: Logging',
+        'Topic :: System :: Networking :: Monitoring',
+        'Topic :: Utilities',
         ]
     )
