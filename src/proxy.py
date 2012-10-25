@@ -31,17 +31,20 @@ Usage:
   proxy [options] <allowed-client> ...
 
 Options:
-  -h --help             Show this screen.
-  --version             Show version and exit.
-  -H, --host HOST       Host to bind to [default: 127.0.0.1].
-  -p, --port PORT       Port to bind to [default: 8000].
-  -l, --logfile PATH    Path to the logfile [default: STDOUT].
-  -d, --daemon          Daemonize (run in the background).
-  -v, --verbose         Log headers.
+  -h --help              Show this screen.
+  --version              Show version and exit.
+  -H, --host HOST        Host to bind to [default: 127.0.0.1].
+  -p, --port PORT        Port to bind to [default: 8000].
+  -l, --logfile PATH     Path to the logfile [default: STDOUT].
+  -i, --pidfile PIDFILE  Path to the pidfile [default: proxy.pid].
+  -d, --daemon           Daemonize (run in the background). The default
+                         logfile path is proxy.log in this case.
+  -v, --verbose          Log headers.
 """
 
 __version__ = "0.9.0"
 
+import atexit
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 import ftplib
 import logging
@@ -314,22 +317,70 @@ def daemonize(logger):
         os.close(fd)
 
 
+def set_process_title(args):
+    try:
+        import setproctitle
+    except ImportError:
+        return
+    proc_details = ['proxy']
+    for arg, value in sorted(args.items()):
+        if value == True:
+            proc_details.append(arg)
+        elif value == False:
+            pass # don't include false toggles
+        elif arg == '<allowed-client>':
+            for client in value:
+                proc_details.append(client)
+        else:
+            value = unicode(value)
+            if 'file' in arg:
+                value = os.path.realpath(value)
+            proc_details.append(arg)
+            proc_details.append(value)
+    setproctitle.setproctitle(" ".join(proc_details))
+
+
+def handle_pidfile(pidfile, logger):
+    pid = str(os.getpid())
+    try:
+        with open(pidfile) as pf:
+            stale_pid = pf.read()
+        if pid != stale_pid:
+            try:
+                import psutil
+                if psutil.pid_exists(int(stale_pid)):
+                    msg = ("Pidfile `%s` exists. PID %s still running. "
+                           "Exiting." % (pidfile, stale_pid))
+                    logger.log(logging.CRITICAL, msg)
+                    raise RuntimeError(msg)
+                msg = ("Removed stale pidfile `%s` with non-existing PID %s."
+                       % (pidfile, stale_pid))
+                logger.log(logging.WARNING, msg)
+            except (ImportError, ValueError):
+                msg = "Pidfile `%s` exists. Exiting." % pidfile
+                logger.log(logging.CRITICAL, msg)
+                raise RuntimeError(msg)
+    except IOError:
+        with open(pidfile, 'w') as pf:
+            pf.write(pid)
+    atexit.register(os.unlink, pidfile)
+
+
 def main():
     max_log_size = 20
     run_event = threading.Event()
     args = docopt(__doc__, version=__version__)
+    logger = setup_logging(
+        args['--logfile'], max_log_size, args['--daemon'], args['--verbose'],
+    )
     try:
         args['--port'] = int(args['--port'])
         if not (0 < args['--port'] < 65536):
             raise ValueError("Out of range.")
     except (ValueError, TypeError):
-        print >>sys.stderr, "error: `%s` is not a valid port number." % (
-            args['--port']
-        )
+        msg = "`%s` is not a valid port number. Exiting." % args['--port']
+        logger.log(logging.CRITICAL, msg)
         return 1
-    logger = setup_logging(
-        args['--logfile'], max_log_size, args['--daemon'], args['--verbose'],
-    )
     if args['--daemon']:
         daemonize(logger)
     signal.signal(signal.SIGINT, handler)
@@ -343,6 +394,11 @@ def main():
     else:
         logger.log(logging.INFO, "Any clients will be served...")
     ProxyHandler.verbose = args['--verbose']
+    try:
+        handle_pidfile(args['--pidfile'], logger)
+    except RuntimeError:
+        return 2
+    set_process_title(args)
     server_address = socket.gethostbyname(args['--host']), args['--port']
     httpd = ThreadingHTTPServer(server_address, ProxyHandler, logger)
     sa = httpd.socket.getsockname()

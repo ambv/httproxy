@@ -29,13 +29,15 @@ Usage::
 
 Options::
 
-  -h --help             Show this screen.
-  --version             Show version and exit.
-  -H, --host HOST       Host to bind to [default: 127.0.0.1].
-  -p, --port PORT       Port to bind to [default: 8000].
-  -l, --logfile PATH    Path to the logfile [default: STDOUT].
-  -d, --daemon          Daemonize (run in the background).
-  -v, --verbose         Log headers.
+  -h --help              Show this screen.
+  --version              Show version and exit.
+  -H, --host HOST        Host to bind to [default: 127.0.0.1].
+  -p, --port PORT        Port to bind to [default: 8000].
+  -l, --logfile PATH     Path to the logfile [default: STDOUT].
+  -i, --pidfile PIDFILE  Path to the pidfile [default: proxy.pid].
+  -d, --daemon           Daemonize (run in the background). The default
+                         logfile path is proxy.log in this case.
+  -v, --verbose          Log headers.
 
 
 To start the proxy server and bind it to port 22222 (the port on which it will
@@ -59,6 +61,16 @@ the server in the background (as a daemon)::
     proxy -p 22222 -l proxy.log -d
 
 
+Optional dependencies
+---------------------
+
+If you install ``setproctitle``, the name of the process reported by ``ps`` will
+be more descriptive.
+
+If you install ``psutil``, proxy will be able to automatically remove stale
+pidfiles on startup.
+
+
 Change Log
 ----------
 
@@ -68,6 +80,9 @@ Change Log
 * ability to specify the address the proxy will bind to (``--host``)
 
 * ability to log headers sent and received (``--verbose``)
+
+* better process management: pidfile support, a more descriptive process title
+  (with the optional ``setproctitle`` dependency)
 
 * major code refactoring
 
