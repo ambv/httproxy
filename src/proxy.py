@@ -77,7 +77,7 @@ class ProxyHandler(BaseHTTPRequestHandler):
 
     def handle(self):
         ip, port = self.client_address
-        self.server.logger.log(logging.INFO, "Request from '%s'", ip)
+        self.server.logger.log(logging.DEBUG, "Request from '%s'", ip)
         if self.allowed_clients and ip not in self.allowed_clients:
             self.raw_requestline = self.rfile.readline()
             if self.parse_request():
@@ -92,7 +92,7 @@ class ProxyHandler(BaseHTTPRequestHandler):
         else:
             host_port = netloc, 80
         self.server.logger.log(
-            logging.INFO, "connect to %s:%d", host_port[0], host_port[1])
+            logging.DEBUG, "Connect to %s:%d", host_port[0], host_port[1])
         try:
             soc.connect(host_port)
         except socket.error, arg:
@@ -246,8 +246,8 @@ def setup_logging(filename, log_size, daemon, verbose):
         handler = logging.handlers.RotatingFileHandler(
             filename, maxBytes=(log_size * (1 << 20)), backupCount=5)
     fmt = logging.Formatter("[%(asctime)-12s.%(msecs)03d] "
-                            "%(levelname)-8s {%(name)s %(threadName)s}"
-                            " %(message)s",
+                            "%(levelname)-8s %(threadName)s  "
+                            "%(message)s",
                             "%Y-%m-%d %H:%M:%S")
     handler.setFormatter(fmt)
 
