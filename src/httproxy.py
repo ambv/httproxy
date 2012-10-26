@@ -31,15 +31,17 @@ Usage:
   httproxy [options] <allowed-client> ...
 
 Options:
-  -h, --help             Show this screen.
-  --version              Show version and exit.
-  -H, --host HOST        Host to bind to [default: 127.0.0.1].
-  -p, --port PORT        Port to bind to [default: 8000].
-  -l, --logfile PATH     Path to the logfile [default: STDOUT].
-  -i, --pidfile PIDFILE  Path to the pidfile [default: httproxy.pid].
-  -d, --daemon           Daemonize (run in the background). The default
-                         logfile path is httproxy.log in this case.
-  -v, --verbose          Log headers.
+  -h, --help                   Show this screen.
+  --version                    Show version and exit.
+  -H, --host HOST              Host to bind to [default: 127.0.0.1].
+  -p, --port PORT              Port to bind to [default: 8000].
+  -l, --logfile PATH           Path to the logfile [default: STDOUT].
+  -i, --pidfile PIDFILE        Path to the pidfile [default: httproxy.pid].
+  -d, --daemon                 Daemonize (run in the background). The
+                               default logfile path is httproxy.log in
+                               this case.
+  -c, --configfile CONFIGFILE  Path to a configuration file.
+  -v, --verbose                Log headers.
 """
 
 __version__ = "0.9.0"
@@ -62,6 +64,7 @@ from time import sleep
 from types import FrameType, CodeType
 import urlparse
 
+from configparser import ConfigParser
 from docopt import docopt
 
 DEFAULT_LOG_FILENAME = "httproxy.log"
@@ -335,8 +338,8 @@ def set_process_title(args):
     for arg, value in sorted(args.items()):
         if value == True:
             proc_details.append(arg)
-        elif value == False:
-            pass # don't include false toggles
+        elif value == False or value is None:
+            pass # don't include false or empty toggles
         elif arg == '<allowed-client>':
             for client in value:
                 proc_details.append(client)
@@ -379,9 +382,33 @@ def main():
     max_log_size = 20
     run_event = threading.Event()
     args = docopt(__doc__, version=__version__)
+    inifile = ConfigParser()
+    read_from = inifile.read([
+        os.sep + os.sep.join(('etc', 'httproxy', 'config')),
+        os.path.expanduser(os.sep.join(('~', '.httproxy', 'config'))),
+        args.get('--configfile') or '',
+    ])
+    iniconf = inifile['main']
+    for opt in iniconf:
+        long_name = '--%s' % opt
+        if long_name in args:
+            continue # command-line has precedence
+        try:
+            args[long_name] = iniconf.getboolean(opt)
+            continue
+        except ValueError:
+            pass # not a boolean
+        try:
+            args[long_name] = iniconf.getint(opt)
+            continue
+        except ValueError:
+            pass # not an int
+        args[long_name] = iniconf[opt]
     logger = setup_logging(
         args['--logfile'], max_log_size, args['--daemon'], args['--verbose'],
     )
+    for path in read_from:
+        logger.log(logging.DEBUG, 'Read configuration from `%s`.' % path)
     try:
         args['--port'] = int(args['--port'])
         if not (0 < args['--port'] < 65536):

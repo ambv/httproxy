@@ -30,16 +30,17 @@ Usage::
 
 Options::
 
-  -h, --help             Show this screen.
-  --version              Show version and exit.
-  -H, --host HOST        Host to bind to [default: 127.0.0.1].
-  -p, --port PORT        Port to bind to [default: 8000].
-  -l, --logfile PATH     Path to the logfile [default: STDOUT].
-  -i, --pidfile PIDFILE  Path to the pidfile [default: httproxy.pid].
-  -d, --daemon           Daemonize (run in the background). The default
-                         logfile path is httproxy.log in this case.
-  -v, --verbose          Log headers.
-
+  -h, --help                   Show this screen.
+  --version                    Show version and exit.
+  -H, --host HOST              Host to bind to [default: 127.0.0.1].
+  -p, --port PORT              Port to bind to [default: 8000].
+  -l, --logfile PATH           Path to the logfile [default: STDOUT].
+  -i, --pidfile PIDFILE        Path to the pidfile [default: httproxy.pid].
+  -d, --daemon                 Daemonize (run in the background). The
+                               default logfile path is httproxy.log in
+                               this case.
+  -c, --configfile CONFIGFILE  Path to a configuration file.
+  -v, --verbose                Log headers.
 
 To start the proxy server and bind it to port 22222 (the port on which it will
 listen and accept connections)::
@@ -60,6 +61,33 @@ To start the proxy server bound to port 22222, log to file ``httproxy.log`` and 
 the server in the background (as a daemon)::
 
     httproxy -p 22222 -l httproxy.log -d
+
+
+Configuration file
+------------------
+
+Every option stated as a command-line argument can be passed using
+a configuration file. httproxy looks for the following files to read
+configuration:
+
+* ``/etc/httproxy/config``
+
+* ``$HOME/.httproxy/config`` (or ``%HOME%\.httproxy\config`` on Windows)
+
+* the value specified in ``--configfile`` on command-line
+
+The names of the settings in the ``main`` section are derived from the long
+command line option names.
+
+An example file::
+
+  [main]
+  host = localhost
+  port = 8011
+  logfile = /Users/ambv/.httproxy/log
+  pidfile = /Users/ambv/.httproxy/pid
+  daemon = yes
+  verbose = yes
 
 
 Optional dependencies
