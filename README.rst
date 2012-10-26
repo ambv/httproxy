@@ -106,12 +106,16 @@ Change Log
 0.9.0
 ~~~~~
 
+* ability to read configuration from a file (``--configfile``)
+
 * ability to specify the address the proxy will bind to (``--host``)
 
 * ability to log headers sent and received (``--verbose``)
 
 * better process management: pidfile support, a more descriptive process title
   (with the optional ``setproctitle`` dependency)
+
+* fixed spurious ``[Errno 54] Connection reset by peer`` tracebacks
 
 * major code refactoring
 
