@@ -1,1 +1,1 @@
-include bin/proxy README.rst LICENSE.txt
+include bin/httproxy README.rst LICENSE.txt

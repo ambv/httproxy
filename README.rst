@@ -1,23 +1,23 @@
-proxy
-=====
+httproxy
+========
 
 This module implements a tiny HTTP proxy by extending ``BaseHTTPServer``.
 Supports the ``GET``, ``HEAD``, ``POST``, ``PUT``, ``DELETE`` and ``CONNECT``
 methods.
 
 The latest version can be installed via `PyPI
-<http://pypi.python.org/pypi/proxy/>`_::
+<http://pypi.python.org/pypi/httproxy/>`_::
 
-  $ pip install proxy
+  $ pip install httproxy
   
 or::
 
-  $ easy_install proxy
+  $ easy_install httproxy
 
 
-The `source code repository <http://github.com/ambv/proxy>`_ and `issue
-tracker <http://github.com/ambv/proxy/issues>`_ are maintained on
-`GitHub <http://github.com/ambv/proxy>`_.
+The `source code repository <http://github.com/ambv/httproxy>`_ and `issue
+tracker <http://github.com/ambv/httproxy/issues>`_ are maintained on
+`GitHub <http://github.com/ambv/httproxy>`_.
 
 
 Quickstart 
@@ -25,8 +25,8 @@ Quickstart
 
 Usage::
 
-  proxy [options]
-  proxy [options] <allowed-client> ...
+  httproxy [options]
+  httproxy [options] <allowed-client> ...
 
 Options::
 
@@ -35,31 +35,31 @@ Options::
   -H, --host HOST        Host to bind to [default: 127.0.0.1].
   -p, --port PORT        Port to bind to [default: 8000].
   -l, --logfile PATH     Path to the logfile [default: STDOUT].
-  -i, --pidfile PIDFILE  Path to the pidfile [default: proxy.pid].
+  -i, --pidfile PIDFILE  Path to the pidfile [default: httproxy.pid].
   -d, --daemon           Daemonize (run in the background). The default
-                         logfile path is proxy.log in this case.
+                         logfile path is httproxy.log in this case.
   -v, --verbose          Log headers.
 
 
 To start the proxy server and bind it to port 22222 (the port on which it will
 listen and accept connections)::
 
-    proxy -p 22222
+    httproxy -p 22222
 
 To start the proxy server, bind it to port 22222 and tell it to log all requests
-to the file ``proxy.log``::
+to the file ``httproxy.log``::
 
-    proxy -p 22222 -l proxy.log
+    httproxy -p 22222 -l httproxy.log
 
 To start the proxy server so it only allows connections from IP
 ``123.123.123.123``::
 
-    proxy 123.123.123.123
+    httproxy 123.123.123.123
 
-To start the proxy server bound to port 22222, log to file ``proxy.log`` and run
+To start the proxy server bound to port 22222, log to file ``httproxy.log`` and run
 the server in the background (as a daemon)::
 
-    proxy -p 22222 -l proxy.log -d
+    httproxy -p 22222 -l httproxy.log -d
 
 
 Optional dependencies
@@ -68,7 +68,7 @@ Optional dependencies
 If you install ``setproctitle``, the name of the process reported by ``ps`` will
 be more descriptive.
 
-If you install ``psutil``, proxy will be able to automatically remove stale
+If you install ``psutil``, httproxy will be able to automatically remove stale
 pidfiles on startup.
 
 

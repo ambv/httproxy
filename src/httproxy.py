@@ -27,8 +27,8 @@ This module implements GET, HEAD, POST, PUT, DELETE and CONNECT
 methods on BaseHTTPServer.
 
 Usage:
-  proxy [options]
-  proxy [options] <allowed-client> ...
+  httproxy [options]
+  httproxy [options] <allowed-client> ...
 
 Options:
   -h, --help             Show this screen.
@@ -36,9 +36,9 @@ Options:
   -H, --host HOST        Host to bind to [default: 127.0.0.1].
   -p, --port PORT        Port to bind to [default: 8000].
   -l, --logfile PATH     Path to the logfile [default: STDOUT].
-  -i, --pidfile PIDFILE  Path to the pidfile [default: proxy.pid].
+  -i, --pidfile PIDFILE  Path to the pidfile [default: httproxy.pid].
   -d, --daemon           Daemonize (run in the background). The default
-                         logfile path is proxy.log in this case.
+                         logfile path is httproxy.log in this case.
   -v, --verbose          Log headers.
 """
 
@@ -46,6 +46,7 @@ __version__ = "0.9.0"
 
 import atexit
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+import errno
 import ftplib
 import logging
 import logging.handlers
@@ -63,7 +64,7 @@ import urlparse
 
 from docopt import docopt
 
-DEFAULT_LOG_FILENAME = "proxy.log"
+DEFAULT_LOG_FILENAME = "httproxy.log"
 HEADER_TERMINATOR =  re.compile(r'\r\n\r\n')
 
 
@@ -166,6 +167,15 @@ class ProxyHandler(BaseHTTPRequestHandler):
         finally:
             soc.close()
             self.connection.close()
+
+    def handle_one_request(self):
+        try:
+            BaseHTTPRequestHandler.handle_one_request(self)
+        except socket.error, e:
+            if e.errno == errno.ECONNRESET:
+                pass # ignore the error
+            else:
+                raise
 
     def _read_write(self, soc, max_idling=20):
         iw = [self.connection, soc]
@@ -321,7 +331,7 @@ def set_process_title(args):
         import setproctitle
     except ImportError:
         return
-    proc_details = ['proxy']
+    proc_details = ['httproxy']
     for arg, value in sorted(args.items()):
         if value == True:
             proc_details.append(arg)

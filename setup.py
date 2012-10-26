@@ -37,20 +37,20 @@ finally:
 # We couldn't sensibly recover anyway: we need the long description.
 
 setup (
-    name = 'proxy',
+    name = 'httproxy',
     version = '0.9.0',
     author = 'Suzuki Hisao, Mitko Haralanov, Łukasz Langa',
     author_email = 'lukasz@langa.pl',
     description = "A tiny HTTP proxy implementation",
     long_description = long_description,
-    url = 'https://github.com/ambv/proxy/',
+    url = 'https://github.com/ambv/httproxy/',
     keywords = '',
     platforms = ['any'],
     license = 'MIT',
-    py_modules = ['proxy'],
+    py_modules = ['httproxy'],
     package_dir = {'': 'src'},
     include_package_data = True,
-    scripts = ['bin/proxy'],
+    scripts = ['bin/httproxy'],
     zip_safe = False, # if only because of the readme file
     install_requires = [
         'configparser',
