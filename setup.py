@@ -44,7 +44,7 @@ setup (
     description = "A tiny HTTP proxy implementation",
     long_description = long_description,
     url = 'https://github.com/ambv/httproxy/',
-    keywords = '',
+    keywords = 'http proxy mitm man-in-the-middle daemon transparent headers',
     platforms = ['any'],
     license = 'MIT',
     py_modules = ['httproxy'],
