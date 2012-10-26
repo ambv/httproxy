@@ -68,7 +68,7 @@ from configparser import ConfigParser
 from docopt import docopt
 
 DEFAULT_LOG_FILENAME = "httproxy.log"
-HEADER_TERMINATOR =  re.compile(r'\r\n\r\n')
+HEADER_TERMINATOR = re.compile(r'\r\n\r\n')
 
 
 class ProxyHandler(BaseHTTPRequestHandler):
@@ -176,7 +176,7 @@ class ProxyHandler(BaseHTTPRequestHandler):
             BaseHTTPRequestHandler.handle_one_request(self)
         except socket.error, e:
             if e.errno == errno.ECONNRESET:
-                pass # ignore the error
+                pass   # ignore the error
             else:
                 raise
 
@@ -336,10 +336,10 @@ def set_process_title(args):
         return
     proc_details = ['httproxy']
     for arg, value in sorted(args.items()):
-        if value == True:
+        if value is True:
             proc_details.append(arg)
-        elif value == False or value is None:
-            pass # don't include false or empty toggles
+        elif value in (False, None):
+            pass   # don't include false or empty toggles
         elif arg == '<allowed-client>':
             for client in value:
                 proc_details.append(client)
@@ -378,10 +378,7 @@ def handle_pidfile(pidfile, logger):
     atexit.register(os.unlink, pidfile)
 
 
-def main():
-    max_log_size = 20
-    run_event = threading.Event()
-    args = docopt(__doc__, version=__version__)
+def handle_ini_configuration(args):
     inifile = ConfigParser()
     read_from = inifile.read([
         os.sep + os.sep.join(('etc', 'httproxy', 'config')),
@@ -392,18 +389,26 @@ def main():
     for opt in iniconf:
         long_name = '--%s' % opt
         if long_name in args:
-            continue # command-line has precedence
+            continue   # command-line has precedence
         try:
             args[long_name] = iniconf.getboolean(opt)
             continue
         except ValueError:
-            pass # not a boolean
+            pass   # not a boolean
         try:
             args[long_name] = iniconf.getint(opt)
             continue
         except ValueError:
-            pass # not an int
+            pass   # not an int
         args[long_name] = iniconf[opt]
+    return read_from
+
+
+def main():
+    max_log_size = 20
+    run_event = threading.Event()
+    args = docopt(__doc__, version=__version__)
+    read_from = handle_ini_configuration()
     logger = setup_logging(
         args['--logfile'], max_log_size, args['--daemon'], args['--verbose'],
     )
