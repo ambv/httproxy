@@ -79,6 +79,10 @@ configuration:
 The names of the settings in the ``main`` section are derived from the long
 command line option names.
 
+The ``allowed-clients`` section holds a list of hostnames that can access the
+proxy, one hostname per line. Remove this section or leave empty to allow any
+client to connect.
+
 An example file::
 
   [main]
@@ -88,6 +92,12 @@ An example file::
   pidfile = /Users/ambv/.httproxy/pid
   daemon = yes
   verbose = yes
+
+  [allowed-clients]
+  localhost
+  192.168.0.1
+
+**Note:** command-line options have precedence over configuration file settings.
 
 
 Optional dependencies

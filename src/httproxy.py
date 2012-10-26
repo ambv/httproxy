@@ -345,7 +345,7 @@ def set_process_title(args):
                 proc_details.append(client)
         else:
             value = unicode(value)
-            if 'file' in arg:
+            if 'file' in arg and value not in ('STDOUT', '-'):
                 value = os.path.realpath(value)
             proc_details.append(arg)
             proc_details.append(value)
@@ -378,37 +378,49 @@ def handle_pidfile(pidfile, logger):
     atexit.register(os.unlink, pidfile)
 
 
-def handle_ini_configuration(args):
-    inifile = ConfigParser()
+def handle_configuration():
+    default_args = docopt(__doc__, argv=(), version=__version__)
+    cmdline_args = docopt(__doc__, version=__version__)
+    for a in default_args:
+        if cmdline_args[a] == default_args[a]:
+            del cmdline_args[a]   # only keep overriden values
+    del default_args['<allowed-client>']
+    inifile = ConfigParser(allow_no_value=True)
+    inifile.optionxform = lambda o: o if o.startswith('--') else ('--' + o)
+    inifile['DEFAULT'] = default_args
+    inifile['allowed-clients'] = {}
     read_from = inifile.read([
         os.sep + os.sep.join(('etc', 'httproxy', 'config')),
         os.path.expanduser(os.sep.join(('~', '.httproxy', 'config'))),
-        args.get('--configfile') or '',
+        cmdline_args.get('--configfile') or '',
     ])
-    iniconf = inifile['main']
+    iniconf = dict(inifile['main'])
     for opt in iniconf:
-        long_name = '--%s' % opt
-        if long_name in args:
-            continue   # command-line has precedence
         try:
-            args[long_name] = iniconf.getboolean(opt)
+            iniconf[opt] = inifile['main'].getboolean(opt)
             continue
-        except ValueError:
+        except (ValueError, AttributeError):
             pass   # not a boolean
         try:
-            args[long_name] = iniconf.getint(opt)
+            iniconf[opt] = inifile['main'].getint(opt)
             continue
-        except ValueError:
+        except (ValueError, TypeError):
             pass   # not an int
-        args[long_name] = iniconf[opt]
-    return read_from
+    iniconf.update(cmdline_args)
+    if not iniconf.get('<allowed-client>'):
+        # copy values from INI but don't include --port etc.
+        inifile['DEFAULT'].clear()
+        clients = []
+        for client in inifile['allowed-clients']:
+            clients.append(client[2:])
+        iniconf['<allowed-client>'] = clients
+    return read_from, iniconf
 
 
 def main():
     max_log_size = 20
     run_event = threading.Event()
-    args = docopt(__doc__, version=__version__)
-    read_from = handle_ini_configuration()
+    read_from, args = handle_configuration()
     logger = setup_logging(
         args['--logfile'], max_log_size, args['--daemon'], args['--verbose'],
     )
@@ -428,7 +440,11 @@ def main():
     if args['<allowed-client>']:
         allowed = []
         for name in args['<allowed-client>']:
-            client = socket.gethostbyname(name)
+            try:
+                client = socket.gethostbyname(name)
+            except socket.error, e:
+                logger.log(logging.CRITICAL, "%s: %s. Exiting." % (name, e))
+                return 3
             allowed.append(client)
             logger.log(logging.INFO, "Accept: %s(%s)" % (client, name))
         ProxyHandler.allowed_clients = allowed
@@ -444,6 +460,7 @@ def main():
     httpd = ThreadingHTTPServer(server_address, ProxyHandler, logger)
     sa = httpd.socket.getsockname()
     logger.info("Serving HTTP on %s:%s" % (sa[0], sa[1]))
+    atexit.register(logger.log, logging.INFO, "Server shutdown")
     req_count = 0
     while not run_event.isSet():
         try:
@@ -460,7 +477,6 @@ def main():
                 pass
             else:
                 logger.log(logging.CRITICAL, "Errno: %d - %s", e[0], e[1])
-    logger.log(logging.INFO, "Server shutdown")
     return 0
 
 
