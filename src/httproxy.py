@@ -268,7 +268,7 @@ def setup_logging(filename, log_size, daemon, verbose):
     return logger
 
 
-def handler(signo, frame):
+def signal_handler(signo, frame):
     while frame and isinstance(frame, FrameType):
         if frame.f_code and isinstance(frame.f_code, CodeType):
             if "run_event" in frame.f_code.co_varnames:
@@ -436,7 +436,9 @@ def main():
         return 1
     if args['--daemon']:
         daemonize(logger)
-    signal.signal(signal.SIGINT, handler)
+    signal.signal(signal.SIGHUP, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
     if args['<allowed-client>']:
         allowed = []
         for name in args['<allowed-client>']:
