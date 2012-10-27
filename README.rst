@@ -127,6 +127,8 @@ Change Log
 
 * fixed spurious ``[Errno 54] Connection reset by peer`` tracebacks
 
+* properly shuts down when receiving ``SIGHUP``, ``SIGINT`` or ``SIGTERM``
+
 * major code refactoring
 
 * compatible with Python 2.6 and 2.7 only: requires ``docopt`` and ``configparser``
