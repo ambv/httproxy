@@ -1,1 +1,2 @@
 include bin/httproxy README.rst LICENSE.txt
+prune test
