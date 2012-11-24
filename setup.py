@@ -67,7 +67,7 @@ setup (
         'Intended Audience :: Other Audience',
         'Intended Audience :: Science/Research',
         'Intended Audience :: System Administrators',
-        'Intended Audience :: Telecommunications Industry  ',
+        'Intended Audience :: Telecommunications Industry',
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
         'Operating System :: MacOS :: MacOS X',
