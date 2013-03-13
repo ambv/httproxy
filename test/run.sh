@@ -17,8 +17,8 @@ if [[ ! -d proxy.local ]]; then
   python -c 'import site; print site.__file__'
   pip install deps/ordereddict-1.1.tar.gz
   pip install deps/unittest2-0.5.1.tar.gz
-  pip install deps/docopt-0.5.0.tar.gz
-  pip install deps/configparser-3.2.0r3.tar.gz
+  pip install deps/docopt-0.6.1.tar.gz
+  pip install deps/configparser-3.3.0r2.tar.gz
   cd ..
   pip install -e .
   cd test
@@ -28,7 +28,7 @@ if [[ ! -d client.local ]]; then
   $VIRTUALENV --no-site-packages --use-distribute client.local
   source client.local/bin/activate
   python -c 'import site; print site.__file__'
-  pip install deps/requests-0.14.1.tar.gz
+  pip install deps/requests-1.1.0.tar.gz
   deactivate
 fi
 

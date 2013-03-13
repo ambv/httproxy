@@ -389,6 +389,7 @@ def handle_configuration():
     inifile.optionxform = lambda o: o if o.startswith('--') else ('--' + o)
     inifile['DEFAULT'] = default_args
     inifile['allowed-clients'] = {}
+    inifile['main'] = {}
     read_from = inifile.read([
         os.sep + os.sep.join(('etc', 'httproxy', 'config')),
         os.path.expanduser(os.sep.join(('~', '.httproxy', 'config'))),

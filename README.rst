@@ -113,6 +113,13 @@ pidfiles on startup.
 Change Log
 ----------
 
+0.9.1
+~~~~~
+
+* fixed `issue #2 <https://github.com/ambv/httproxy/pull/2>`_: ``KeyError`` if
+  there's no ``[main]`` section in ``~/.httproxy/config``. Thanks to Rune
+  Hansen for the report and initial patch.
+
 0.9.0
 ~~~~~
 
