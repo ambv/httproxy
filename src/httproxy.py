@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Copyright(C) 2001 - 2012 SUZUKI Hisao, Mitko Haralanov, Łukasz Langa
+# Copyright(C) 2001 - 2014 SUZUKI Hisao, Mitko Haralanov, Łukasz Langa
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files(the "Software"), to deal
@@ -50,6 +50,7 @@ import atexit
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 import errno
 import ftplib
+import functools
 import logging
 import logging.handlers
 import os
@@ -61,7 +62,6 @@ import SocketServer
 import sys
 import threading
 from time import sleep
-from types import FrameType, CodeType
 import urlparse
 
 from configparser import ConfigParser
@@ -268,13 +268,15 @@ def setup_logging(filename, log_size, daemon, verbose):
     return logger
 
 
-def signal_handler(signo, frame):
-    while frame and isinstance(frame, FrameType):
-        if frame.f_code and isinstance(frame.f_code, CodeType):
-            if "run_event" in frame.f_code.co_varnames:
-                frame.f_locals["run_event"].set()
-                return
-        frame = frame.f_back
+def signal_handler(signo, frame, event=None):
+    """This handler setup lets us handle one last request gracefully."""
+    sys.stderr.write('Caught signal {}\n'.format(signo))
+    if signo == signal.SIGALRM:
+        raise StopServing("Unhang handle_request()")
+    if event:
+        event.set()
+    sys.stderr.flush()
+    signal.alarm(1)
 
 
 def daemonize(logger):
@@ -299,10 +301,13 @@ def daemonize(logger):
             self.obj = obj
 
         def write(self, string):
-            self.obj.log(logging.ERROR, string)
+            self.obj.log(logging.ERROR, string.rstrip())
 
         def read(self, *args, **kwargs):
             return 0
+
+        def flush(self):
+            pass
 
         def close(self):
             pass
@@ -418,9 +423,13 @@ def handle_configuration():
     return read_from, iniconf
 
 
+class StopServing(Exception):
+    """Raised by sigalrm to break blocking handle_request()."""
+
+
 def main():
     max_log_size = 20
-    run_event = threading.Event()
+    shutdown_in_progress = threading.Event()
     read_from, args = handle_configuration()
     logger = setup_logging(
         args['--logfile'], max_log_size, args['--daemon'], args['--verbose'],
@@ -437,9 +446,11 @@ def main():
         return 1
     if args['--daemon']:
         daemonize(logger)
-    signal.signal(signal.SIGHUP, signal_handler)
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
+    handler_with_event = functools.partial(signal_handler, event=shutdown_in_progress)
+    signal.signal(signal.SIGHUP, handler_with_event)
+    signal.signal(signal.SIGINT, handler_with_event)
+    signal.signal(signal.SIGTERM, handler_with_event)
+    signal.signal(signal.SIGALRM, handler_with_event)
     if args['<allowed-client>']:
         allowed = []
         for name in args['<allowed-client>']:
@@ -465,7 +476,7 @@ def main():
     logger.info("Serving HTTP on %s:%s" % (sa[0], sa[1]))
     atexit.register(logger.log, logging.INFO, "Server shutdown")
     req_count = 0
-    while not run_event.isSet():
+    while not shutdown_in_progress.isSet():
         try:
             httpd.handle_request()
             req_count += 1
@@ -476,10 +487,10 @@ def main():
                 )
                 req_count = 0
         except select.error, e:
-            if e[0] == 4 and run_event.isSet():
-                pass
-            else:
+            if e[0] != 4 or not shutdown_in_progress.isSet():
                 logger.log(logging.CRITICAL, "Errno: %d - %s", e[0], e[1])
+        except StopServing:
+            continue
     return 0
 
 

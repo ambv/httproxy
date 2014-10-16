@@ -1,15 +1,15 @@
 httproxy
 ========
 
-This module implements a tiny HTTP proxy by extending ``BaseHTTPServer``.
-Supports the ``GET``, ``HEAD``, ``POST``, ``PUT``, ``DELETE`` and ``CONNECT``
-methods.
+This module implements a tiny threaded HTTP proxy by extending
+``HTTPServer``.  Supports the ``GET``, ``HEAD``, ``POST``, ``PUT``,
+``DELETE`` and ``CONNECT`` methods.
 
 The latest version can be installed via `PyPI
 <http://pypi.python.org/pypi/httproxy/>`_::
 
   $ pip install httproxy
-  
+
 or::
 
   $ easy_install httproxy
@@ -20,7 +20,7 @@ tracker <http://github.com/ambv/httproxy/issues>`_ are maintained on
 `GitHub <http://github.com/ambv/httproxy>`_.
 
 
-Quickstart 
+Quickstart
 ----------
 
 Usage::
@@ -119,6 +119,14 @@ Change Log
 * fixed `issue #2 <https://github.com/ambv/httproxy/pull/2>`_: ``KeyError`` if
   there's no ``[main]`` section in ``~/.httproxy/config``. Thanks to Rune
   Hansen for the report and initial patch.
+
+* fixed hang on shutdown due to blocking ``handle_request()``
+
+* fixed installability on PyPy
+
+* removed the unholy frame-walking signal handling
+
+* updated the test suite so it works with new virtualenvs
 
 0.9.0
 ~~~~~

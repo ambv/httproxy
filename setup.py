@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Copyright (C) 2012 by Łukasz Langa
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
@@ -22,15 +22,11 @@
 # THE SOFTWARE.
 
 import os
-import sys
-from setuptools import setup, find_packages
+from setuptools import setup
 
-reload(sys)
-sys.setdefaultencoding('utf8')
-
-ld_file = open(os.path.join(os.path.dirname(__file__), 'README.rst'))
+ld_file = open(os.path.join(os.path.dirname(__file__), 'README.rst'), 'rb')
 try:
-    long_description = ld_file.read()
+    long_description = ld_file.read().decode('utf8')
 finally:
     ld_file.close()
 # We let it die a horrible tracebacking death if reading the file fails.
@@ -38,8 +34,8 @@ finally:
 
 setup (
     name = 'httproxy',
-    version = '0.9.0',
-    author = 'Suzuki Hisao, Mitko Haralanov, Łukasz Langa',
+    version = '0.9.1',
+    author = b'Suzuki Hisao, Mitko Haralanov, \xc5\x81ukasz Langa',
     author_email = 'lukasz@langa.pl',
     description = "A tiny HTTP proxy implementation",
     long_description = long_description,
